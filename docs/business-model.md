@@ -2,7 +2,7 @@
 
 ## Classification
 
-- Repository: `cloud-itonami-8542`
+- Repository: `cloud-itonami-isic-8542`
 - ISIC Rev.5: `8542`
 - Activity: cultural education -- instruction in music, arts, dance, language and other cultural skills
 - Social impact: education access, data sovereignty, transparent audit

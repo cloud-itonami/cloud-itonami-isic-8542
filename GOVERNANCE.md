@@ -1,6 +1,6 @@
 # Governance
 
-`cloud-itonami-8542` is an OSS open-business blueprint for cultural education -- instruction in music, arts, dance, language and other cultural skills.
+`cloud-itonami-isic-8542` is an OSS open-business blueprint for cultural education -- instruction in music, arts, dance, language and other cultural skills.
 Governance covers both the capability layer and the operator model.
 
 ## Maintainers

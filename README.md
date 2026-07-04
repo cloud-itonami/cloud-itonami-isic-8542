@@ -1,4 +1,4 @@
-# cloud-itonami-8542
+# cloud-itonami-isic-8542
 
 Open Business Blueprint for **ISIC Rev.5 8542**: Cultural education.
 

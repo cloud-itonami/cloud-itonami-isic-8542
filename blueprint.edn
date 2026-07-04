@@ -1,4 +1,4 @@
-{:itonami.blueprint/id "cloud-itonami-8542"
+{:itonami.blueprint/id "cloud-itonami-isic-8542"
  :itonami.blueprint/name "Cultural education"
  :itonami.blueprint/isic-rev5 "8542"
  :itonami.blueprint/domain :education/cultural
