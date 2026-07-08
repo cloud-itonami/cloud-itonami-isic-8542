@@ -35,3 +35,36 @@
 - every record path is auditable
 - student data stays outside Git
 - emergency manual override paths remain outside LLM control
+- an unresolved child-performer work permit, or insufficient practice
+  hours, forces a hold, not an override
+- certification finalization is logged and escalated, and cannot be
+  finalized twice for the same student: a double-finalization attempt
+  is held off this actor's own student facts alone, with no upstream
+  comparison needed
+
+## Instruction Integrity Governor: decision rule
+
+`blueprint.edn` fixes `:itonami.blueprint/governor` to `:instruction-
+integrity-governor` -- this is not a generic "review step," it is the
+one gate the ONE real-world act this business performs (finalizing a
+real certification or progress record) must pass. The governor sits
+between the StudioEdOps-LLM and execution, per the README's Core
+Contract:
+
+```text
+StudioEdOps-LLM -> Instruction Integrity Governor -> hold, proceed, or human approval
+```
+
+**Approves**: routine cultural-education actions proposed against a
+student that already has a consented curriculum on file, satisfied
+required evidence, sufficient recorded practice hours, and a
+resolved child-performer-permit status. These proceed straight to
+the student ledger.
+
+**Rejects or escalates**: the governor refuses to let the advisor
+finalize a certification on its own authority when any of the
+following hold -- a fabricated jurisdiction spec-basis; incomplete
+evidence; insufficient practice hours; an unresolved child-performer
+work permit; a double-finalization attempt. A clean finalization
+proposal still always routes to a human -- `:actuation/finalize-
+certification` is never auto-committed, at any rollout phase.
