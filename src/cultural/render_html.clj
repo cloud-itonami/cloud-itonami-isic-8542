@@ -1,0 +1,686 @@
+(ns cultural.render-html
+  "Build-time HTML renderer for `docs/samples/operator-console.html`.
+
+  Closes flagship checklist item 2: this repo previously had NO demo
+  page and no generator at all. This namespace drives the REAL actor
+  stack (`cultural.operation` -> `cultural.governor` ->
+  `cultural.store`, via `langgraph.graph/run*`) through scenarios
+  built on this repo's OWN seeded students (`cultural.store/demo-data`
+  -- `student-1`..`student-4`), and renders the result
+  deterministically.
+
+  Nothing on the page is hand-typed domain data: every student id,
+  jurisdiction, practice-hours figure, hold rule, hold detail string,
+  certification number and ledger row is read back out of the store
+  and the graph audit channel after a real run. The only hand-written
+  strings are section headings and explanatory prose.
+
+  Determinism: no timestamps, no randomness, no map iteration order
+  relied upon (every collection rendered is either an ordered vector
+  from the ledger or explicitly sorted). Two consecutive runs are
+  byte-identical.
+
+  Build-time invariants (see `-main`) -- these FAIL THE BUILD rather
+  than quietly rendering a weaker page:
+    1. the run must produce at least one `:governor-hold` record;
+    2. every one of the governor's five HARD checks must actually have
+       fired (`expected-hard-rules`), so a check that gets deleted or a
+       scenario that stops exercising one cannot land silently;
+    3. every `var(--x)` the document references must be defined in the
+       document (a CSS-variable closure check -- an unstyled console
+       is a silent failure otherwise).
+
+  Usage: `clojure -M:dev:render-html [out-file]`
+  (default `docs/samples/operator-console.html`)."
+  (:require [clojure.string :as str]
+            [cultural.facts :as facts]
+            [cultural.operation :as op]
+            [cultural.store :as store]
+            [langgraph.graph :as g]))
+
+;; ============================ real actor runs ============================
+
+(def ^:private operator
+  {:actor-id "op-1" :actor-role :licensed-educator :phase 3})
+
+(defn- ctx [phase] (assoc operator :phase phase))
+
+(defn- exec!
+  "One supervised actor run. Returns the langgraph result map."
+  ([actor tid request] (exec! actor tid request operator))
+  ([actor tid request context]
+   (g/run* actor {:request request :context context} {:thread-id tid})))
+
+(defn- approve! [actor tid]
+  (g/run* actor {:approval {:status :approved :by "op-1"}}
+          {:thread-id tid :resume? true}))
+
+(defn- reject! [actor tid]
+  (g/run* actor {:approval {:status :rejected :by "op-1"}}
+          {:thread-id tid :resume? true}))
+
+(def expected-hard-rules
+  "The five HARD checks `cultural.governor` implements. The scenario
+  below must make every one of them fire; `-main` fails the build if
+  any is missing. Keep in sync with `cultural.governor/check`."
+  #{:no-spec-basis
+    :evidence-incomplete
+    :child-performer-work-permit-unresolved
+    :practice-hours-insufficient
+    :already-finalized})
+
+(defn run-demo!
+  "Runs a fresh seeded store through a scenario that reaches every
+  disposition this actor can produce, against the repo's own seeded
+  students:
+
+    student-1 (Sato Kenji, JPN, 120/100 practice hours, permit
+      resolved) -- attempts a certification finalization BEFORE any
+      curriculum is on file, which HARD-holds `:evidence-incomplete`;
+      then clears curriculum verification and permit screening (both
+      phase-gated to human approval), finalizes its certification
+      (`:actuation/finalize-certification` ALWAYS escalates -- never
+      auto at any phase) and is then refused a SECOND finalization
+      (`:already-finalized`).
+
+    student-2 (Atlantis Doe, jurisdiction ATL -- deliberately absent
+      from `cultural.facts/catalog`) -- HARD-holds `:no-spec-basis`:
+      the advisor must not invent a jurisdiction's requirements.
+
+    student-3 (鈴木花子, JPN, 50/100 practice hours) -- clears
+      curriculum verification, then HARD-holds
+      `:practice-hours-insufficient` when a finalization is attempted;
+      its permit screening is then ESCALATED and REJECTED by the human
+      approver, exercising the approval-veto path.
+
+    student-4 (田中一郎, JPN, child-performer work permit UNRESOLVED)
+      -- HARD-holds `:child-performer-work-permit-unresolved` on the
+      screening op itself (the governor evaluates that check
+      unconditionally, so the screen can hold on its own finding), and
+      HARD-holds again on the actuation op after its curriculum is on
+      file, proving the check is not scoped to one op.
+
+  Returns {:db store :audit [..all graph audit facts, in order..]}.
+  The audit channel is returned because it carries facts the store
+  ledger never receives (notably `:approval-granted`) -- see
+  `approver-attribution` for why that matters here."
+  []
+  (let [db (store/seed-db)
+        actor (op/build db)
+        audit (atom [])
+        keep! (fn [r] (swap! audit into (get-in r [:state :audit])) r)]
+
+    ;; student-1: intake auto-commits at phase 3 (no capital risk).
+    (keep! (exec! actor "s1-intake"
+                  {:op :student/intake :subject "student-1"
+                   :patch {:id "student-1" :student-name "Sato Kenji"}}))
+
+    ;; student-1: finalize BEFORE any curriculum exists -> evidence incomplete.
+    (keep! (exec! actor "s1-final-early"
+                  {:op :actuation/finalize-certification :subject "student-1"}))
+
+    ;; student-1: curriculum + permit, both human-approved.
+    (keep! (exec! actor "s1-curriculum" {:op :curriculum/verify :subject "student-1"}))
+    (keep! (approve! actor "s1-curriculum"))
+
+    (keep! (exec! actor "s1-permit" {:op :permit/screen :subject "student-1"}))
+    (keep! (approve! actor "s1-permit"))
+
+    ;; student-1: the one real-world actuation -- always escalates, approved.
+    (keep! (exec! actor "s1-final" {:op :actuation/finalize-certification :subject "student-1"}))
+    (keep! (approve! actor "s1-final"))
+
+    ;; student-1: a second finalization is refused outright.
+    (keep! (exec! actor "s1-final-again"
+                  {:op :actuation/finalize-certification :subject "student-1"}))
+
+    ;; student-2: no official spec-basis for its jurisdiction.
+    (keep! (exec! actor "s2-curriculum"
+                  {:op :curriculum/verify :subject "student-2" :no-spec? true}))
+
+    ;; student-3: curriculum clears, finalization holds on its own hours.
+    (keep! (exec! actor "s3-curriculum" {:op :curriculum/verify :subject "student-3"}))
+    (keep! (approve! actor "s3-curriculum"))
+    (keep! (exec! actor "s3-final"
+                  {:op :actuation/finalize-certification :subject "student-3"}))
+
+    ;; student-3: an escalation the human REJECTS (approval veto path).
+    (keep! (exec! actor "s3-permit" {:op :permit/screen :subject "student-3"}))
+    (keep! (reject! actor "s3-permit"))
+
+    ;; student-4: the screening op HARD-holds on its own finding.
+    (keep! (exec! actor "s4-permit" {:op :permit/screen :subject "student-4"}))
+
+    ;; student-4: curriculum clears, but the actuation still holds on the permit.
+    (keep! (exec! actor "s4-curriculum" {:op :curriculum/verify :subject "student-4"}))
+    (keep! (approve! actor "s4-curriculum"))
+    (keep! (exec! actor "s4-final"
+                  {:op :actuation/finalize-certification :subject "student-4"}))
+
+    {:db db :audit @audit}))
+
+;; ---------------------- measured rollout-phase matrix ----------------------
+
+(defn- probe-phase
+  "Runs ONE op at ONE rollout phase against its OWN freshly seeded
+  store, and reports the disposition the actor actually reached. This
+  is measured runtime behaviour, not a transcription of
+  `cultural.phase/phases`.
+
+  `prep?` first commits student-1's curriculum + permit screening, so
+  the actuation probe is not confounded by an evidence-incomplete
+  hold."
+  [phase request prep?]
+  (let [db (store/seed-db)
+        actor (op/build db)]
+    (when prep?
+      ;; prep runs at phase 3 so the setup itself is never phase-blocked
+      (exec! actor "prep-c" {:op :curriculum/verify :subject "student-1"} (ctx 3))
+      (approve! actor "prep-c")
+      (exec! actor "prep-p" {:op :permit/screen :subject "student-1"} (ctx 3))
+      (approve! actor "prep-p"))
+    (let [r (exec! actor "probe" request (ctx phase))
+          st (:state r)
+          audit (:audit st)
+          hold (last (filter #(= :governor-hold (:t %)) audit))
+          esc  (last (filter #(= :approval-requested (:t %)) audit))]
+      {:disposition (:disposition st)
+       :reason (or (:phase-reason hold)
+                   (when (seq (:basis hold)) (first (:basis hold)))
+                   (:reason esc))})))
+
+(def ^:private phase-probe-ops
+  [{:label ":student/intake"
+    :request {:op :student/intake :subject "student-1"
+              :patch {:id "student-1" :student-name "Sato Kenji"}}
+    :prep? false}
+   {:label ":curriculum/verify"
+    :request {:op :curriculum/verify :subject "student-1"}
+    :prep? false}
+   {:label ":permit/screen"
+    :request {:op :permit/screen :subject "student-1"}
+    :prep? false}
+   {:label ":actuation/finalize-certification"
+    :request {:op :actuation/finalize-certification :subject "student-1"}
+    :prep? true}])
+
+(defn measure-phase-matrix
+  "op x phase -> disposition actually reached, measured by running the
+  real graph 4 ops x 4 phases = 16 times on fresh stores."
+  []
+  (vec (for [{:keys [label request prep?]} phase-probe-ops]
+         {:label label
+          :cells (vec (for [phase [0 1 2 3]]
+                        (assoc (probe-phase phase request prep?) :phase phase)))})))
+
+;; ============================ derived disclosure ============================
+
+(defn approver-attribution
+  "DERIVES, rather than assumes, whether the human approver survived
+  into a committed register.
+
+  Measured on this repo (2026-08-15): `cultural.store/commit-record!`
+  handles `:curriculum/set` and `:permit/set` off the record's
+  `:payload` -- which the approval node enriches with `:approved-by`
+  -- so for those two effects the approver DOES survive. But
+  `:student/mark-finalized` ignores both `:value` and `:payload` and
+  rebuilds the record from `cultural.registry`, so the approver is
+  DROPPED there; and the `:approval-granted` audit fact never reaches
+  the store ledger at all (only `:committed` does). The approver of a
+  certification finalization is therefore recoverable ONLY from the
+  graph audit channel.
+
+  This function does not hardcode that conclusion: it looks for
+  `:approved-by` in the actual register, and only falls back to the
+  audit channel when the key is genuinely absent. If the store is
+  later fixed, the page self-corrects to `:commit-record` with no
+  change here."
+  [register audit subject op]
+  (if-let [by (:approved-by register)]
+    {:approver by :source :commit-record}
+    (if-let [f (last (filter #(and (= :approval-granted (:t %))
+                                   (= subject (:subject %))
+                                   (= op (:op %)))
+                             audit))]
+      {:approver (:by f) :source :audit-only}
+      {:approver nil :source :none})))
+
+;; ================================ rendering ================================
+
+(defn- esc [v]
+  (-> (str v)
+      (str/replace "&" "&amp;")
+      (str/replace "<" "&lt;")
+      (str/replace ">" "&gt;")))
+
+(defn- kw-name [v] (if (keyword? v) (name v) (str v)))
+
+(defn- pill [cls label]
+  (str "<span class=\"pill " cls "\">" (esc label) "</span>"))
+
+(defn- attribution-cell [{:keys [approver source]}]
+  (case source
+    :commit-record (str (esc approver) " " (pill "ok" "in commit record"))
+    :audit-only    (str (esc approver) " "
+                        (pill "warn" "audit only — not in commit record"))
+    (pill "muted" "no approver (auto-committed)")))
+
+;; ----- roster -----
+
+(defn- last-fact-for [ledger id]
+  (last (filter #(= (:subject %) id) ledger)))
+
+(defn- status-cell [ledger id]
+  (let [f (last-fact-for ledger id)]
+    (cond
+      (nil? f) (pill "muted" "no activity")
+      (= :governor-hold (:t f))
+      (pill "critical" (str "HARD hold · " (kw-name (or (-> f :violations first :rule) :unknown))))
+      (= :approval-rejected (:t f)) (pill "critical" "approval rejected")
+      (= :committed (:t f)) (pill "ok" "committed")
+      :else (pill "muted" "in progress"))))
+
+(defn- hours-cell [{:keys [practice-hours-completed practice-hours-required]}]
+  (str (esc practice-hours-completed) " / " (esc practice-hours-required) " h "
+       (if (and (number? practice-hours-completed) (number? practice-hours-required)
+                (< practice-hours-completed practice-hours-required))
+         (pill "critical" "short")
+         (pill "ok" "met"))))
+
+(defn- student-row [ledger db {:keys [id student-name jurisdiction
+                                      child-performer-work-permit-unresolved?
+                                      certification-finalized? certification-number] :as s}]
+  (let [known? (some? (facts/spec-basis jurisdiction))]
+    (format
+     (str "        <tr><td><code>%s</code></td><td>%s</td><td>%s</td><td>%s</td>"
+          "<td>%s</td><td>%s</td><td>%s</td></tr>")
+     (esc id) (esc student-name)
+     (str (esc jurisdiction) " "
+          (if known? (pill "ok" "spec-basis on file") (pill "critical" "no spec-basis")))
+     (hours-cell s)
+     (if child-performer-work-permit-unresolved?
+       (pill "critical" "unresolved")
+       (pill "ok" "resolved"))
+     (if certification-finalized?
+       (str (pill "ok" "finalized") " <code>" (esc certification-number) "</code>")
+       (pill "muted" "not finalized"))
+     (status-cell ledger id))))
+
+;; ----- holds -----
+
+(defn- hold-rows [ledger]
+  (let [holds (filter #(#{:governor-hold :approval-rejected} (:t %)) ledger)]
+    (str/join
+     "\n"
+     (for [h holds
+           v (:violations h)]
+       (format
+        (str "        <tr><td><code>%s</code></td><td><code>%s</code></td>"
+             "<td><code>%s</code></td><td>%s</td><td>%s</td></tr>")
+        (esc (:subject h))
+        (esc (kw-name (:op h)))
+        (esc (kw-name (:rule v)))
+        (if (= :approval-rejected (:t h))
+          (pill "warn" "human veto (overridable path)")
+          (pill "critical" "HARD · not overridable"))
+        (esc (or (:detail v) "—")))))))
+
+;; ----- ledger -----
+
+(defn- ledger-row [{:keys [t op subject disposition basis]}]
+  (format "        <tr><td>%s</td><td><code>%s</code></td><td><code>%s</code></td><td>%s</td></tr>"
+          (case t
+            :committed (pill "ok" "committed")
+            :governor-hold (pill "critical" "governor-hold")
+            :approval-rejected (pill "critical" "approval-rejected")
+            (pill "muted" (kw-name t)))
+          (esc (kw-name (or op :n-a)))
+          (esc subject)
+          (esc (or (some->> basis seq (map kw-name) (str/join ", "))
+                   (some-> disposition kw-name)
+                   "—"))))
+
+;; ----- phase matrix -----
+
+(defn- disposition-pill [{:keys [disposition reason]}]
+  (let [cls (case disposition :commit "ok" :escalate "warn" :hold "critical" "muted")]
+    (str (pill cls (kw-name (or disposition :none)))
+         (when reason (str "<br><span class=\"tiny\">" (esc (kw-name reason)) "</span>")))))
+
+(defn- phase-row [{:keys [label cells]}]
+  (format "        <tr><td><code>%s</code></td>%s</tr>"
+          (esc label)
+          (str/join (map #(str "<td>" (disposition-pill %) "</td>") cells))))
+
+;; ----- registers -----
+
+(defn- register-rows [db audit students]
+  (str/join
+   "\n"
+   (for [{:keys [id]} students
+         :let [cur (store/curriculum-of db id)
+               per (store/permit-screen-of db id)]
+         [kind reg op] [["curriculum" cur :curriculum/verify]
+                        ["permit-screen" per :permit/screen]]
+         :when reg]
+     (format
+      (str "        <tr><td><code>%s</code></td><td>%s</td><td>%s</td>"
+           "<td>%s</td><td>%s</td></tr>")
+      (esc id) (esc kind)
+      (if (= "curriculum" kind)
+        (str (esc (:jurisdiction reg)) " · "
+             (esc (count (:checklist reg))) " evidence items")
+        (if (:child-performer-work-permit-unresolved? reg)
+          (pill "critical" "permit unresolved")
+          (pill "ok" "permit resolved")))
+      (if (= "curriculum" kind)
+        (if-let [sb (:spec-basis reg)]
+          (str "<code>" (esc sb) "</code>")
+          (pill "critical" "none"))
+        "—")
+      (attribution-cell (approver-attribution reg audit id op))))))
+
+;; ----- certifications -----
+
+(defn- certification-rows [db audit]
+  (str/join
+   "\n"
+   (for [r (store/certification-history db)
+         :let [sid (get r "student_id")
+               st (store/student db sid)]]
+     (format
+      (str "        <tr><td><code>%s</code></td><td><code>%s</code></td><td>%s</td>"
+           "<td>%s</td><td>%s</td><td>%s</td></tr>")
+      (esc (get r "record_id"))
+      (esc sid)
+      (esc (get r "jurisdiction"))
+      (esc (get r "kind"))
+      (if (get r "immutable") (pill "ok" "immutable") (pill "warn" "mutable"))
+      (attribution-cell
+       (approver-attribution st audit sid :actuation/finalize-certification))))))
+
+;; ----- jurisdiction coverage -----
+
+(defn- coverage-rows []
+  (str/join
+   "\n"
+   (for [iso3 (sort (keys facts/catalog))
+         :let [{:keys [name owner-authority legal-basis provenance required-evidence]}
+               (facts/spec-basis iso3)]]
+     (format
+      (str "        <tr><td><code>%s</code></td><td>%s</td><td>%s</td><td>%s</td>"
+           "<td>%s</td><td><a href=\"%s\">source</a></td></tr>")
+      (esc iso3) (esc name) (esc owner-authority) (esc legal-basis)
+      (esc (count required-evidence))
+      (esc provenance)))))
+
+;; ================================== CSS ==================================
+
+(def ^:private dds-css
+  "Only the jp-go-digital-design-system primitives this console actually
+  references, transcribed from the copy already vendored into this
+  repo's own `docs/index.html` (upstream commit
+  3b34f4c3553fa3bee90bfd8b6fe962ac3055107d, MIT, (c) 2025 デジタル庁).
+
+  Inlined rather than taken as a git dependency on purpose: the build
+  stays offline, and the console renders in the same palette as the
+  product face. NOTE `--color-semantic-error-1`/`-2` are BOTH dark reds
+  (red-800/red-900) -- they are not a strong/weak pair -- so tinted
+  backgrounds below use the primitive `-50` steps."
+  (str/join
+   "\n"
+   [":root{"
+    "--color-primitive-blue-50:#e8f1fe;--color-primitive-blue-700:#264af4;"
+    "--color-primitive-blue-900:#0017c1;"
+    "--color-primitive-green-50:#e6f5ec;--color-primitive-green-600:#259d63;"
+    "--color-primitive-green-800:#197a4b;"
+    "--color-primitive-yellow-50:#fbf5e0;--color-primitive-yellow-700:#b78f00;"
+    "--color-primitive-yellow-900:#927200;"
+    "--color-primitive-red-50:#fdeeee;--color-primitive-red-800:#ec0000;"
+    "--color-primitive-red-900:#ce0000;"
+    "--color-neutral-white:#ffffff;--color-neutral-solid-gray-50:#f2f2f2;"
+    "--color-neutral-solid-gray-200:#cccccc;--color-neutral-solid-gray-300:#b3b3b3;"
+    "--color-neutral-solid-gray-600:#666666;--color-neutral-solid-gray-700:#4d4d4d;"
+    "--color-neutral-solid-gray-800:#333333;--color-neutral-solid-gray-900:#1a1a1a;"
+    "--font-family-sans:\"Noto Sans JP\",-apple-system,BlinkMacSystemFont,sans-serif;"
+    "--font-family-mono:\"Noto Sans Mono\",monospace;"
+    "--color-semantic-success-1:var(--color-primitive-green-600);"
+    "--color-semantic-success-2:var(--color-primitive-green-800);"
+    "--color-semantic-error-1:var(--color-primitive-red-800);"
+    "--color-semantic-error-2:var(--color-primitive-red-900);"
+    "--color-semantic-warning-yellow-2:var(--color-primitive-yellow-900);"
+    "--color-key-700:var(--color-primitive-blue-700);"
+    "--color-key-900:var(--color-primitive-blue-900);"
+    "}"
+    ;; ---- app CSS, written against the primitives above ----
+    "*{box-sizing:border-box}"
+    "body{margin:0;background:var(--color-neutral-white);"
+    "color:var(--color-neutral-solid-gray-800);font-family:var(--font-family-sans);"
+    "line-height:1.7}"
+    ".dds-ext-container{max-width:78rem;margin-inline:auto;padding-inline:1rem}"
+    ".dds-ext-card{border:1px solid var(--color-neutral-solid-gray-200);"
+    "border-radius:12px;padding:1.5rem;background:var(--color-neutral-white);"
+    "margin-block:1.5rem;overflow-x:auto}"
+    ".pf-header{padding-block:3rem 0.5rem}"
+    ".pf-header h1{margin:0 0 .75rem;font-size:2rem;line-height:1.4;"
+    "color:var(--color-neutral-solid-gray-900)}"
+    ".pf-meta{color:var(--color-neutral-solid-gray-600);font-size:.875rem;margin:.5rem 0 0}"
+    "h2{margin:0 0 .5rem;font-size:1.25rem;color:var(--color-neutral-solid-gray-900)}"
+    ".muted{color:var(--color-neutral-solid-gray-600);font-size:.875rem;margin:0 0 1rem}"
+    "table{border-collapse:collapse;width:100%;font-size:.875rem}"
+    "th,td{border-bottom:1px solid var(--color-neutral-solid-gray-200);"
+    "padding:.55rem .6rem;text-align:left;vertical-align:top}"
+    "th{background:var(--color-neutral-solid-gray-50);"
+    "color:var(--color-neutral-solid-gray-700);font-weight:700;white-space:nowrap}"
+    "code{font-family:var(--font-family-mono);background:var(--color-neutral-solid-gray-50);"
+    "border:1px solid var(--color-neutral-solid-gray-200);border-radius:4px;"
+    "padding:1px 5px;font-size:.9em}"
+    "a{color:var(--color-key-700)}a:visited{color:var(--color-key-900)}"
+    ".pill{display:inline-block;border-radius:999px;padding:1px 9px;font-size:.75rem;"
+    "font-weight:700;white-space:nowrap;border:1px solid transparent}"
+    ".pill.ok{background:var(--color-primitive-green-50);"
+    "color:var(--color-semantic-success-2);border-color:var(--color-semantic-success-1)}"
+    ".pill.warn{background:var(--color-primitive-yellow-50);"
+    "color:var(--color-semantic-warning-yellow-2);"
+    "border-color:var(--color-primitive-yellow-700)}"
+    ".pill.critical{background:var(--color-primitive-red-50);"
+    "color:var(--color-semantic-error-2);border-color:var(--color-semantic-error-1)}"
+    ".pill.muted{background:var(--color-neutral-solid-gray-50);"
+    "color:var(--color-neutral-solid-gray-600);"
+    "border-color:var(--color-neutral-solid-gray-300)}"
+    ".chip{display:inline-block;background:var(--color-primitive-blue-50);"
+    "color:var(--color-key-900);border-radius:999px;padding:2px 12px;font-size:.8125rem;"
+    "font-weight:700}"
+    ".tiny{font-size:.6875rem;color:var(--color-neutral-solid-gray-600);font-weight:400}"
+    ".pf-footer{border-top:1px solid var(--color-neutral-solid-gray-200);margin-top:2rem;"
+    "padding-block:1.5rem 3rem;color:var(--color-neutral-solid-gray-600);font-size:.8125rem}"
+    ".pf-footer p{margin:0 0 .4rem}"]))
+
+;; ================================ document ================================
+
+(defn- section [title lead headers rows]
+  (str "  <section class=\"dds-ext-card\">\n"
+       "    <h2>" title "</h2>\n"
+       "    <p class=\"muted\">" lead "</p>\n"
+       "    <table>\n"
+       "      <thead><tr>" (str/join (map #(str "<th>" % "</th>") headers)) "</tr></thead>\n"
+       "      <tbody>\n" rows "\n      </tbody>\n"
+       "    </table>\n"
+       "  </section>\n"))
+
+(defn render
+  "Renders the operator console from a completed `run-demo!` result."
+  [{:keys [db audit]}]
+  (let [ledger (vec (store/ledger db))
+        students (vec (store/all-students db))
+        matrix (measure-phase-matrix)
+        holds (filter #(= :governor-hold (:t %)) ledger)
+        hard-rules (sort (distinct (map :rule (mapcat :violations holds))))
+        cov (facts/coverage)]
+    (str
+     "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n"
+     "<meta charset=\"utf-8\">\n"
+     "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\">\n"
+     "<meta name=\"color-scheme\" content=\"light\">\n"
+     "<title>cloud-itonami-isic-8542 · Cultural education — Operator Console</title>\n"
+     "<style>" dds-css "</style>\n</head>\n<body>\n"
+     "<div class=\"dds-ext-container\">\n"
+     "  <header class=\"pf-header\">\n"
+     "    <h1>Cultural education (ISIC 8542) — Operator Console</h1>\n"
+     "    <span class=\"chip\">StudioEdOps-LLM ⊣ Instruction Integrity Governor · read-only sample</span>\n"
+     "    <p class=\"pf-meta\">Build-time generated from the real actor stack by "
+     "<code>cultural.render-html</code> (<code>clojure -M:dev:render-html</code>). "
+     "Every id, jurisdiction, hour count, hold reason and certification number below was read back "
+     "out of <code>cultural.store</code> after a real <code>langgraph.graph/run*</code> run over the "
+     "seeded students in <code>cultural.store/demo-data</code> — nothing on this page is hand-typed "
+     "domain data. Deterministic: no timestamps, byte-identical across reruns.</p>\n"
+     "  </header>\n"
+
+     (section
+      "Students"
+      (str "The seeded student directory after the scenario ran, straight from "
+           "<code>cultural.store/all-students</code>. "
+           (esc (count students)) " students; "
+           "the <em>spec-basis</em> flag is <code>cultural.facts/spec-basis</code> evaluated live "
+           "per jurisdiction.")
+      ["Student" "Name" "Jurisdiction" "Practice hours" "Child-performer permit"
+       "Certification" "Last decision"]
+      (str/join "\n" (map (partial student-row ledger db) students)))
+
+     (section
+      "Governor holds (this run)"
+      (str "Every violation the Instruction Integrity Governor raised. "
+           (esc (count holds)) " HARD governor holds covering "
+           (esc (count hard-rules)) " distinct rules — "
+           (esc (str/join ", " (map kw-name hard-rules)))
+           ". HARD violations cannot be overridden by a human approver; the "
+           "<code>approver-rejected</code> row is the separate, overridable human-veto path. "
+           "Detail strings are the governor's own, not paraphrased.")
+      ["Student" "Op" "Rule" "Class" "Governor detail"]
+      (hold-rows ledger))
+
+     (section
+      "Rollout phase gate (measured)"
+      (str "Measured, not transcribed: each cell is the disposition the actor actually reached "
+           "when the op was run at that phase against its own freshly seeded store "
+           "(4 ops × 4 phases = 16 real graph runs). "
+           "<code>:actuation/finalize-certification</code> never reaches "
+           "<code>commit</code> at ANY phase — <code>cultural.phase</code> omits it from every "
+           "<code>:auto</code> set and <code>cultural.governor</code> independently marks it "
+           "high-stakes. Its column is probed against a store whose curriculum and permit "
+           "screening are already committed, so the result is not confounded by an "
+           "evidence-incomplete hold.")
+      ["Op" "Phase 0 <span class=\"tiny\">read-only</span>"
+       "Phase 1 <span class=\"tiny\">assisted-intake</span>"
+       "Phase 2 <span class=\"tiny\">assisted-verify</span>"
+       "Phase 3 <span class=\"tiny\">supervised-auto</span>"]
+      (str/join "\n" (map phase-row matrix)))
+
+     (section
+      "Committed registers &amp; approver attribution"
+      (str "Curriculum and permit-screening records that actually reached the SSoT. "
+           "The approver column is <strong>derived at render time</strong> by looking for "
+           "<code>:approved-by</code> in the stored register itself, falling back to the graph "
+           "audit channel only when the key is genuinely absent — so this page self-corrects if "
+           "the store is later changed. Measured on this repo: "
+           "<code>:curriculum/set</code> and <code>:permit/set</code> persist the approver "
+           "(<code>commit-record!</code> reads <code>:payload</code>), so attribution survives here.")
+      ["Student" "Register" "Content" "Spec-basis cited" "Approved by"]
+      (register-rows db audit students))
+
+     (section
+      "Certification finalization records"
+      (str "The append-only certification drafts from "
+           "<code>cultural.store/certification-history</code>, built by "
+           "<code>cultural.registry/register-certification-finalization</code>. "
+           "Every certificate this actor produces is UNSIGNED — signature is the operator's own "
+           "act. <strong>Attribution gap, measured not assumed:</strong> "
+           "<code>commit-record!</code>'s <code>:student/mark-finalized</code> branch ignores both "
+           "<code>:value</code> and <code>:payload</code> and rebuilds the record from "
+           "<code>cultural.registry</code>, and the <code>:approval-granted</code> fact never "
+           "reaches the store ledger — so the approver of a finalization is recoverable only from "
+           "the graph audit channel. It is shown below and labelled as such rather than omitted, "
+           "so a reader can tell &ldquo;nobody approved&rdquo; from &ldquo;the store did not keep it&rdquo;.")
+      ["Certification no." "Student" "Jurisdiction" "Kind" "Immutability" "Approved by"]
+      (certification-rows db audit))
+
+     (section
+      "Audit ledger (this run)"
+      (str "The append-only decision-fact log the store actually holds — "
+           (esc (count ledger)) " facts, in commit order. "
+           "Every hold and every commit this scenario produced; no SSoT mutation happens off "
+           "this log.")
+      ["Fact" "Op" "Student" "Basis"]
+      (str/join "\n" (map ledger-row ledger)))
+
+     (section
+      "Jurisdiction spec-basis coverage"
+      (str "<code>cultural.facts/catalog</code> as seeded: "
+           (esc (:covered cov)) " of " (esc (:requested cov))
+           " jurisdictions carry an official spec-basis ("
+           (esc (str/join ", " (:covered-jurisdictions cov)))
+           "). A jurisdiction absent from this table has NO spec-basis, full stop — the advisor "
+           "must not fabricate one, and the governor HARD-holds if it tries (which is exactly "
+           "what <code>student-2</code>'s <code>ATL</code> jurisdiction demonstrates above). "
+           "This is a starting catalog, not a survey of all ~194 jurisdictions.")
+      ["ISO3" "Jurisdiction" "Owner authority" "Legal basis" "Required evidence" "Provenance"]
+      (coverage-rows))
+
+     "  <footer class=\"pf-footer\">\n"
+     "    <p>Generated by <code>cultural.render-html</code> from a real "
+     "<code>cultural.operation</code> → <code>cultural.governor</code> → "
+     "<code>cultural.store</code> run. No invented usage, revenue or outcome metrics.</p>\n"
+     "    <p>Styling: jp-go-digital-design-system primitives (MIT, © 2025 デジタル庁), inlined "
+     "from this repo's own vendored copy in <code>docs/index.html</code> so the build stays "
+     "offline.</p>\n"
+     "  </footer>\n"
+     "</div>\n</body>\n</html>\n")))
+
+;; ============================ build-time gates ============================
+
+(defn- check-hard-holds!
+  "Fails the build unless the run produced governor holds covering every
+  HARD check the governor implements."
+  [ledger]
+  (let [holds (filter #(= :governor-hold (:t %)) ledger)
+        rules (set (map :rule (mapcat :violations holds)))
+        missing (sort (remove rules expected-hard-rules))]
+    (when (zero? (count holds))
+      (throw (ex-info "render-html: the scenario produced ZERO :governor-hold records -- the console would show a governor that never refuses anything"
+                      {:ledger-facts (count ledger)})))
+    (when (seq missing)
+      (throw (ex-info (str "render-html: HARD checks never fired: " (str/join ", " (map kw-name missing)))
+                      {:missing (vec missing) :observed (vec (sort rules))})))
+    {:holds (count holds) :rules (vec (sort rules))}))
+
+(defn- check-css-closure!
+  "Fails the build if the document references a CSS custom property it
+  never defines -- the failure mode that silently renders an unstyled
+  console."
+  [html]
+  (let [referenced (set (map second (re-seq #"var\((--[a-z0-9-]+)\)" html)))
+        defined (set (map second (re-seq #"(--[a-z0-9-]+)\s*:" html)))
+        dangling (sort (remove defined referenced))]
+    (when (seq dangling)
+      (throw (ex-info (str "render-html: undefined CSS variables: " (str/join ", " dangling))
+                      {:dangling (vec dangling)})))
+    {:css-vars-referenced (count referenced) :css-vars-defined (count defined)}))
+
+(defn -main [& args]
+  (let [out (or (first args) "docs/samples/operator-console.html")
+        {:keys [db audit] :as result} (run-demo!)
+        ledger (vec (store/ledger db))
+        {:keys [holds rules]} (check-hard-holds! ledger)
+        html (render result)
+        css (check-css-closure! html)
+        f (java.io.File. ^String out)]
+    (when-let [parent (.getParentFile f)] (.mkdirs parent))
+    (spit out html)
+    (println "wrote" out (str "(" (count html) " chars)"))
+    (println "  ledger facts        :" (count ledger))
+    (println "  HARD governor holds :" holds "covering" (count rules) "rules:"
+             (str/join ", " (map kw-name rules)))
+    (println "  audit facts         :" (count audit))
+    (println "  certifications      :" (count (store/certification-history db)))
+    (println "  css vars            :" (:css-vars-referenced css) "referenced,"
+             (:css-vars-defined css) "defined")))
