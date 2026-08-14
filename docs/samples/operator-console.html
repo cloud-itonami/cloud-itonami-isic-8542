@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>cloud-itonami-isic-8542 · Cultural education — Operator Console</title>
+<style>:root{
+--color-primitive-blue-50:#e8f1fe;--color-primitive-blue-700:#264af4;
+--color-primitive-blue-900:#0017c1;
+--color-primitive-green-50:#e6f5ec;--color-primitive-green-600:#259d63;
+--color-primitive-green-800:#197a4b;
+--color-primitive-yellow-50:#fbf5e0;--color-primitive-yellow-700:#b78f00;
+--color-primitive-yellow-900:#927200;
+--color-primitive-red-50:#fdeeee;--color-primitive-red-800:#ec0000;
+--color-primitive-red-900:#ce0000;
+--color-neutral-white:#ffffff;--color-neutral-solid-gray-50:#f2f2f2;
+--color-neutral-solid-gray-200:#cccccc;--color-neutral-solid-gray-300:#b3b3b3;
+--color-neutral-solid-gray-600:#666666;--color-neutral-solid-gray-700:#4d4d4d;
+--color-neutral-solid-gray-800:#333333;--color-neutral-solid-gray-900:#1a1a1a;
+--font-family-sans:"Noto Sans JP",-apple-system,BlinkMacSystemFont,sans-serif;
+--font-family-mono:"Noto Sans Mono",monospace;
+--color-semantic-success-1:var(--color-primitive-green-600);
+--color-semantic-success-2:var(--color-primitive-green-800);
+--color-semantic-error-1:var(--color-primitive-red-800);
+--color-semantic-error-2:var(--color-primitive-red-900);
+--color-semantic-warning-yellow-2:var(--color-primitive-yellow-900);
+--color-key-700:var(--color-primitive-blue-700);
+--color-key-900:var(--color-primitive-blue-900);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--color-neutral-white);
+color:var(--color-neutral-solid-gray-800);font-family:var(--font-family-sans);
+line-height:1.7}
+.dds-ext-container{max-width:78rem;margin-inline:auto;padding-inline:1rem}
+.dds-ext-card{border:1px solid var(--color-neutral-solid-gray-200);
+border-radius:12px;padding:1.5rem;background:var(--color-neutral-white);
+margin-block:1.5rem;overflow-x:auto}
+.pf-header{padding-block:3rem 0.5rem}
+.pf-header h1{margin:0 0 .75rem;font-size:2rem;line-height:1.4;
+color:var(--color-neutral-solid-gray-900)}
+.pf-meta{color:var(--color-neutral-solid-gray-600);font-size:.875rem;margin:.5rem 0 0}
+h2{margin:0 0 .5rem;font-size:1.25rem;color:var(--color-neutral-solid-gray-900)}
+.muted{color:var(--color-neutral-solid-gray-600);font-size:.875rem;margin:0 0 1rem}
+table{border-collapse:collapse;width:100%;font-size:.875rem}
+th,td{border-bottom:1px solid var(--color-neutral-solid-gray-200);
+padding:.55rem .6rem;text-align:left;vertical-align:top}
+th{background:var(--color-neutral-solid-gray-50);
+color:var(--color-neutral-solid-gray-700);font-weight:700;white-space:nowrap}
+code{font-family:var(--font-family-mono);background:var(--color-neutral-solid-gray-50);
+border:1px solid var(--color-neutral-solid-gray-200);border-radius:4px;
+padding:1px 5px;font-size:.9em}
+a{color:var(--color-key-700)}a:visited{color:var(--color-key-900)}
+.pill{display:inline-block;border-radius:999px;padding:1px 9px;font-size:.75rem;
+font-weight:700;white-space:nowrap;border:1px solid transparent}
+.pill.ok{background:var(--color-primitive-green-50);
+color:var(--color-semantic-success-2);border-color:var(--color-semantic-success-1)}
+.pill.warn{background:var(--color-primitive-yellow-50);
+color:var(--color-semantic-warning-yellow-2);
+border-color:var(--color-primitive-yellow-700)}
+.pill.critical{background:var(--color-primitive-red-50);
+color:var(--color-semantic-error-2);border-color:var(--color-semantic-error-1)}
+.pill.muted{background:var(--color-neutral-solid-gray-50);
+color:var(--color-neutral-solid-gray-600);
+border-color:var(--color-neutral-solid-gray-300)}
+.chip{display:inline-block;background:var(--color-primitive-blue-50);
+color:var(--color-key-900);border-radius:999px;padding:2px 12px;font-size:.8125rem;
+font-weight:700}
+.tiny{font-size:.6875rem;color:var(--color-neutral-solid-gray-600);font-weight:400}
+.pf-footer{border-top:1px solid var(--color-neutral-solid-gray-200);margin-top:2rem;
+padding-block:1.5rem 3rem;color:var(--color-neutral-solid-gray-600);font-size:.8125rem}
+.pf-footer p{margin:0 0 .4rem}</style>
+</head>
+<body>
+<div class="dds-ext-container">
+  <header class="pf-header">
+    <h1>Cultural education (ISIC 8542) — Operator Console</h1>
+    <span class="chip">StudioEdOps-LLM ⊣ Instruction Integrity Governor · read-only sample</span>
+    <p class="pf-meta">Build-time generated from the real actor stack by <code>cultural.render-html</code> (<code>clojure -M:dev:render-html</code>). Every id, jurisdiction, hour count, hold reason and certification number below was read back out of <code>cultural.store</code> after a real <code>langgraph.graph/run*</code> run over the seeded students in <code>cultural.store/demo-data</code> — nothing on this page is hand-typed domain data. Deterministic: no timestamps, byte-identical across reruns.</p>
+  </header>
+  <section class="dds-ext-card">
+    <h2>Students</h2>
+    <p class="muted">The seeded student directory after the scenario ran, straight from <code>cultural.store/all-students</code>. 4 students; the <em>spec-basis</em> flag is <code>cultural.facts/spec-basis</code> evaluated live per jurisdiction.</p>
+    <table>
+      <thead><tr><th>Student</th><th>Name</th><th>Jurisdiction</th><th>Practice hours</th><th>Child-performer permit</th><th>Certification</th><th>Last decision</th></tr></thead>
+      <tbody>
+        <tr><td><code>student-1</code></td><td>Sato Kenji</td><td>JPN <span class="pill ok">spec-basis on file</span></td><td>120 / 100 h <span class="pill ok">met</span></td><td><span class="pill ok">resolved</span></td><td><span class="pill ok">finalized</span> <code>JPN-CERT-000000</code></td><td><span class="pill critical">HARD hold · already-finalized</span></td></tr>
+        <tr><td><code>student-2</code></td><td>Atlantis Doe</td><td>ATL <span class="pill critical">no spec-basis</span></td><td>120 / 100 h <span class="pill ok">met</span></td><td><span class="pill ok">resolved</span></td><td><span class="pill muted">not finalized</span></td><td><span class="pill critical">HARD hold · no-spec-basis</span></td></tr>
+        <tr><td><code>student-3</code></td><td>鈴木花子</td><td>JPN <span class="pill ok">spec-basis on file</span></td><td>50 / 100 h <span class="pill critical">short</span></td><td><span class="pill ok">resolved</span></td><td><span class="pill muted">not finalized</span></td><td><span class="pill critical">approval rejected</span></td></tr>
+        <tr><td><code>student-4</code></td><td>田中一郎</td><td>JPN <span class="pill ok">spec-basis on file</span></td><td>120 / 100 h <span class="pill ok">met</span></td><td><span class="pill critical">unresolved</span></td><td><span class="pill muted">not finalized</span></td><td><span class="pill critical">HARD hold · child-performer-work-permit-unresolved</span></td></tr>
+      </tbody>
+    </table>
+  </section>
+  <section class="dds-ext-card">
+    <h2>Governor holds (this run)</h2>
+    <p class="muted">Every violation the Instruction Integrity Governor raised. 6 HARD governor holds covering 5 distinct rules — already-finalized, child-performer-work-permit-unresolved, evidence-incomplete, no-spec-basis, practice-hours-insufficient. HARD violations cannot be overridden by a human approver; the <code>approver-rejected</code> row is the separate, overridable human-veto path. Detail strings are the governor's own, not paraphrased.</p>
+    <table>
+      <thead><tr><th>Student</th><th>Op</th><th>Rule</th><th>Class</th><th>Governor detail</th></tr></thead>
+      <tbody>
+        <tr><td><code>student-1</code></td><td><code>finalize-certification</code></td><td><code>evidence-incomplete</code></td><td><span class="pill critical">HARD · not overridable</span></td><td>法域の必要書類(受講同意記録/カリキュラム記録/児童演芸許可確認記録/修了認定記録等)が充足していない状態での提案</td></tr>
+        <tr><td><code>student-1</code></td><td><code>finalize-certification</code></td><td><code>already-finalized</code></td><td><span class="pill critical">HARD · not overridable</span></td><td>student-1 は既に認定確定済み</td></tr>
+        <tr><td><code>student-2</code></td><td><code>verify</code></td><td><code>no-spec-basis</code></td><td><span class="pill critical">HARD · not overridable</span></td><td>公式spec-basisの引用が無い提案は認定基準として扱えない</td></tr>
+        <tr><td><code>student-3</code></td><td><code>finalize-certification</code></td><td><code>practice-hours-insufficient</code></td><td><span class="pill critical">HARD · not overridable</span></td><td>student-3 の練習時間(50)が必要時間(100)に満たない</td></tr>
+        <tr><td><code>student-3</code></td><td><code>screen</code></td><td><code>approver-rejected</code></td><td><span class="pill warn">human veto (overridable path)</span></td><td>—</td></tr>
+        <tr><td><code>student-4</code></td><td><code>screen</code></td><td><code>child-performer-work-permit-unresolved</code></td><td><span class="pill critical">HARD · not overridable</span></td><td>児童演芸許可が未解決の状態での認定確定提案は進められない</td></tr>
+        <tr><td><code>student-4</code></td><td><code>finalize-certification</code></td><td><code>child-performer-work-permit-unresolved</code></td><td><span class="pill critical">HARD · not overridable</span></td><td>児童演芸許可が未解決の状態での認定確定提案は進められない</td></tr>
+      </tbody>
+    </table>
+  </section>
+  <section class="dds-ext-card">
+    <h2>Rollout phase gate (measured)</h2>
+    <p class="muted">Measured, not transcribed: each cell is the disposition the actor actually reached when the op was run at that phase against its own freshly seeded store (4 ops × 4 phases = 16 real graph runs). <code>:actuation/finalize-certification</code> never reaches <code>commit</code> at ANY phase — <code>cultural.phase</code> omits it from every <code>:auto</code> set and <code>cultural.governor</code> independently marks it high-stakes. Its column is probed against a store whose curriculum and permit screening are already committed, so the result is not confounded by an evidence-incomplete hold.</p>
+    <table>
+      <thead><tr><th>Op</th><th>Phase 0 <span class="tiny">read-only</span></th><th>Phase 1 <span class="tiny">assisted-intake</span></th><th>Phase 2 <span class="tiny">assisted-verify</span></th><th>Phase 3 <span class="tiny">supervised-auto</span></th></tr></thead>
+      <tbody>
+        <tr><td><code>:student/intake</code></td><td><span class="pill critical">hold</span><br><span class="tiny">phase-disabled</span></td><td><span class="pill warn">escalate</span><br><span class="tiny">phase-approval</span></td><td><span class="pill warn">escalate</span><br><span class="tiny">phase-approval</span></td><td><span class="pill ok">commit</span></td></tr>
+        <tr><td><code>:curriculum/verify</code></td><td><span class="pill critical">hold</span><br><span class="tiny">phase-disabled</span></td><td><span class="pill critical">hold</span><br><span class="tiny">phase-disabled</span></td><td><span class="pill warn">escalate</span><br><span class="tiny">phase-approval</span></td><td><span class="pill warn">escalate</span><br><span class="tiny">phase-approval</span></td></tr>
+        <tr><td><code>:permit/screen</code></td><td><span class="pill critical">hold</span><br><span class="tiny">phase-disabled</span></td><td><span class="pill critical">hold</span><br><span class="tiny">phase-disabled</span></td><td><span class="pill warn">escalate</span><br><span class="tiny">phase-approval</span></td><td><span class="pill warn">escalate</span><br><span class="tiny">phase-approval</span></td></tr>
+        <tr><td><code>:actuation/finalize-certification</code></td><td><span class="pill critical">hold</span><br><span class="tiny">phase-disabled</span></td><td><span class="pill critical">hold</span><br><span class="tiny">phase-disabled</span></td><td><span class="pill critical">hold</span><br><span class="tiny">phase-disabled</span></td><td><span class="pill warn">escalate</span><br><span class="tiny">actuation</span></td></tr>
+      </tbody>
+    </table>
+  </section>
+  <section class="dds-ext-card">
+    <h2>Committed registers &amp; approver attribution</h2>
+    <p class="muted">Curriculum and permit-screening records that actually reached the SSoT. The approver column is <strong>derived at render time</strong> by looking for <code>:approved-by</code> in the stored register itself, falling back to the graph audit channel only when the key is genuinely absent — so this page self-corrects if the store is later changed. Measured on this repo: <code>:curriculum/set</code> and <code>:permit/set</code> persist the approver (<code>commit-record!</code> reads <code>:payload</code>), so attribution survives here.</p>
+    <table>
+      <thead><tr><th>Student</th><th>Register</th><th>Content</th><th>Spec-basis cited</th><th>Approved by</th></tr></thead>
+      <tbody>
+        <tr><td><code>student-1</code></td><td>curriculum</td><td>JPN · 4 evidence items</td><td><code>https://elaws.e-gov.go.jp/document?lawid=322AC0000000049</code></td><td>op-1 <span class="pill ok">in commit record</span></td></tr>
+        <tr><td><code>student-1</code></td><td>permit-screen</td><td><span class="pill ok">permit resolved</span></td><td>—</td><td>op-1 <span class="pill ok">in commit record</span></td></tr>
+        <tr><td><code>student-3</code></td><td>curriculum</td><td>JPN · 4 evidence items</td><td><code>https://elaws.e-gov.go.jp/document?lawid=322AC0000000049</code></td><td>op-1 <span class="pill ok">in commit record</span></td></tr>
+        <tr><td><code>student-4</code></td><td>curriculum</td><td>JPN · 4 evidence items</td><td><code>https://elaws.e-gov.go.jp/document?lawid=322AC0000000049</code></td><td>op-1 <span class="pill ok">in commit record</span></td></tr>
+      </tbody>
+    </table>
+  </section>
+  <section class="dds-ext-card">
+    <h2>Certification finalization records</h2>
+    <p class="muted">The append-only certification drafts from <code>cultural.store/certification-history</code>, built by <code>cultural.registry/register-certification-finalization</code>. Every certificate this actor produces is UNSIGNED — signature is the operator's own act. <strong>Attribution gap, measured not assumed:</strong> <code>commit-record!</code>'s <code>:student/mark-finalized</code> branch ignores both <code>:value</code> and <code>:payload</code> and rebuilds the record from <code>cultural.registry</code>, and the <code>:approval-granted</code> fact never reaches the store ledger — so the approver of a finalization is recoverable only from the graph audit channel. It is shown below and labelled as such rather than omitted, so a reader can tell &ldquo;nobody approved&rdquo; from &ldquo;the store did not keep it&rdquo;.</p>
+    <table>
+      <thead><tr><th>Certification no.</th><th>Student</th><th>Jurisdiction</th><th>Kind</th><th>Immutability</th><th>Approved by</th></tr></thead>
+      <tbody>
+        <tr><td><code>JPN-CERT-000000</code></td><td><code>student-1</code></td><td>JPN</td><td>certification-finalization-draft</td><td><span class="pill ok">immutable</span></td><td>op-1 <span class="pill warn">audit only — not in commit record</span></td></tr>
+      </tbody>
+    </table>
+  </section>
+  <section class="dds-ext-card">
+    <h2>Audit ledger (this run)</h2>
+    <p class="muted">The append-only decision-fact log the store actually holds — 13 facts, in commit order. Every hold and every commit this scenario produced; no SSoT mutation happens off this log.</p>
+    <table>
+      <thead><tr><th>Fact</th><th>Op</th><th>Student</th><th>Basis</th></tr></thead>
+      <tbody>
+        <tr><td><span class="pill ok">committed</span></td><td><code>intake</code></td><td><code>student-1</code></td><td>id, student-name</td></tr>
+        <tr><td><span class="pill critical">governor-hold</span></td><td><code>finalize-certification</code></td><td><code>student-1</code></td><td>evidence-incomplete</td></tr>
+        <tr><td><span class="pill ok">committed</span></td><td><code>verify</code></td><td><code>student-1</code></td><td>労働基準法 (Labor Standards Act) 第56条・第57条・第60条・第61条 -- 児童の演芸等の労働に関する許可・年少者証明書, https://elaws.e-gov.go.jp/document?lawid=322AC0000000049</td></tr>
+        <tr><td><span class="pill ok">committed</span></td><td><code>screen</code></td><td><code>student-1</code></td><td>permit-check</td></tr>
+        <tr><td><span class="pill ok">committed</span></td><td><code>finalize-certification</code></td><td><code>student-1</code></td><td>student-1</td></tr>
+        <tr><td><span class="pill critical">governor-hold</span></td><td><code>finalize-certification</code></td><td><code>student-1</code></td><td>already-finalized</td></tr>
+        <tr><td><span class="pill critical">governor-hold</span></td><td><code>verify</code></td><td><code>student-2</code></td><td>no-spec-basis</td></tr>
+        <tr><td><span class="pill ok">committed</span></td><td><code>verify</code></td><td><code>student-3</code></td><td>労働基準法 (Labor Standards Act) 第56条・第57条・第60条・第61条 -- 児童の演芸等の労働に関する許可・年少者証明書, https://elaws.e-gov.go.jp/document?lawid=322AC0000000049</td></tr>
+        <tr><td><span class="pill critical">governor-hold</span></td><td><code>finalize-certification</code></td><td><code>student-3</code></td><td>practice-hours-insufficient</td></tr>
+        <tr><td><span class="pill critical">approval-rejected</span></td><td><code>screen</code></td><td><code>student-3</code></td><td>approver-rejected</td></tr>
+        <tr><td><span class="pill critical">governor-hold</span></td><td><code>screen</code></td><td><code>student-4</code></td><td>child-performer-work-permit-unresolved</td></tr>
+        <tr><td><span class="pill ok">committed</span></td><td><code>verify</code></td><td><code>student-4</code></td><td>労働基準法 (Labor Standards Act) 第56条・第57条・第60条・第61条 -- 児童の演芸等の労働に関する許可・年少者証明書, https://elaws.e-gov.go.jp/document?lawid=322AC0000000049</td></tr>
+        <tr><td><span class="pill critical">governor-hold</span></td><td><code>finalize-certification</code></td><td><code>student-4</code></td><td>child-performer-work-permit-unresolved</td></tr>
+      </tbody>
+    </table>
+  </section>
+  <section class="dds-ext-card">
+    <h2>Jurisdiction spec-basis coverage</h2>
+    <p class="muted"><code>cultural.facts/catalog</code> as seeded: 4 of 4 jurisdictions carry an official spec-basis (DEU, GBR, JPN, USA). A jurisdiction absent from this table has NO spec-basis, full stop — the advisor must not fabricate one, and the governor HARD-holds if it tries (which is exactly what <code>student-2</code>'s <code>ATL</code> jurisdiction demonstrates above). This is a starting catalog, not a survey of all ~194 jurisdictions.</p>
+    <table>
+      <thead><tr><th>ISO3</th><th>Jurisdiction</th><th>Owner authority</th><th>Legal basis</th><th>Required evidence</th><th>Provenance</th></tr></thead>
+      <tbody>
+        <tr><td><code>DEU</code></td><td>Germany</td><td>Gewerbeaufsichtsamt / Bundesministerium für Arbeit und Soziales (BMAS)</td><td>Jugendarbeitsschutzgesetz (JArbSchG) §§1, 6 -- Ausnahmebewilligung für Kinder bei künstlerischen Veranstaltungen</td><td>4</td><td><a href="https://www.gesetze-im-internet.de/jarbschg/__6.html">source</a></td></tr>
+        <tr><td><code>GBR</code></td><td>United Kingdom</td><td>Department for Education (DfE) / local authority licensing</td><td>Children (Performances and Activities) Regulations 2014</td><td>4</td><td><a href="https://www.gov.uk/child-employment">source</a></td></tr>
+        <tr><td><code>JPN</code></td><td>Japan</td><td>労働基準監督署 (Labour Standards Inspection Office), 厚生労働省</td><td>労働基準法 (Labor Standards Act) 第56条・第57条・第60条・第61条 -- 児童の演芸等の労働に関する許可・年少者証明書</td><td>4</td><td><a href="https://elaws.e-gov.go.jp/document?lawid=322AC0000000049">source</a></td></tr>
+        <tr><td><code>USA</code></td><td>United States</td><td>California Division of Labor Standards Enforcement (DLSE), Department of Industrial Relations</td><td>California Labor Code §1308.5 et seq. -- Child Performer Services Permit / Entertainment Work Permit</td><td>4</td><td><a href="https://www.dir.ca.gov/dlse/childlaborlawpamphlet.pdf">source</a></td></tr>
+      </tbody>
+    </table>
+  </section>
+  <footer class="pf-footer">
+    <p>Generated by <code>cultural.render-html</code> from a real <code>cultural.operation</code> → <code>cultural.governor</code> → <code>cultural.store</code> run. No invented usage, revenue or outcome metrics.</p>
+    <p>Styling: jp-go-digital-design-system primitives (MIT, © 2025 デジタル庁), inlined from this repo's own vendored copy in <code>docs/index.html</code> so the build stays offline.</p>
+  </footer>
+</div>
+</body>
+</html>
