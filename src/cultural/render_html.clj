@@ -287,9 +287,9 @@
          (pill "critical" "short")
          (pill "ok" "met"))))
 
-(defn- student-row [ledger db {:keys [id student-name jurisdiction
+(defn- student-row [ledger {:keys [id student-name jurisdiction
                                       child-performer-work-permit-unresolved?
-                                      certification-finalized? certification-number] :as s}]
+                                  certification-finalized? certification-number] :as s}]
   (let [known? (some? (facts/spec-basis jurisdiction))]
     (format
      (str "        <tr><td><code>%s</code></td><td>%s</td><td>%s</td><td>%s</td>"
@@ -545,7 +545,7 @@
            "per jurisdiction.")
       ["Student" "Name" "Jurisdiction" "Practice hours" "Child-performer permit"
        "Certification" "Last decision"]
-      (str/join "\n" (map (partial student-row ledger db) students)))
+      (str/join "\n" (map (partial student-row ledger) students)))
 
      (section
       "Governor holds (this run)"
