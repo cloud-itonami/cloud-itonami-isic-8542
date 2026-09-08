@@ -46,7 +46,7 @@
   the certification itself (that is `cultural.operation`'s
   `:actuation/finalize-certification`, always human-gated -- see
   README `Actuation`)."
-  (:require [clojure.string :as str]))
+  (:require [kotoba.lang.text :as str]))
 
 (defn- unsigned-certificate
   "Every certificate this actor produces is UNSIGNED -- signature is the
@@ -91,7 +91,7 @@
     (throw (ex-info "certification-finalization: jurisdiction required" {})))
   (when (< sequence 0)
     (throw (ex-info "certification-finalization: sequence must be >= 0" {})))
-  (let [certification-number (str (str/upper-case jurisdiction) "-CERT-" (zero-pad sequence 6))
+  (let [certification-number (str (str/upper jurisdiction) "-CERT-" (zero-pad sequence 6))
         record {"record_id" certification-number
                 "kind" "certification-finalization-draft"
                 "student_id" student-id
