@@ -214,14 +214,14 @@ the generic robotics/identity/forms/dmn/bpmn/audit-ledger stack only
 
 | File | Role |
 |---|---|
-| `src/cultural/store.cljc` | **Store** protocol -- `MemStore` ‖ `DatomicStore` (`langchain.db`) + append-only audit ledger + certification-finalization history. No dynamically-filed sub-record -- the actuation op acts directly on a pre-seeded student, and the double-actuation guard checks a dedicated `:certification-finalized?` boolean rather than a `:status` value |
-| `src/cultural/registry.cljc` | Certification-finalization draft records, plus `practice-hours-insufficient?` -- an HONEST reuse of this fleet's MINIMUM-threshold sufficiency check family (the NINTH instance), directly analogous to `secondary.registry/attendance-hours-insufficient?`'s own shape, not claimed as new |
-| `src/cultural/facts.cljc` | Per-jurisdiction cultural-education/child-performer catalog with an official spec-basis citation per entry, honest coverage reporting |
-| `src/cultural/culturaladvisor.cljc` | **StudioEdOps-LLM** -- `mock-advisor` ‖ `llm-advisor`; intake/curriculum-verification/child-performer-permit-screening/certification-finalization proposals |
-| `src/cultural/governor.cljc` | **Instruction Integrity Governor** -- 5 HARD checks (spec-basis · evidence-incomplete · child-performer-work-permit-unresolved, unconditional evaluation, GENUINELY NEW, the 53rd grounding of this discipline · practice-hours-insufficient, MINIMUM-threshold reuse, the 9th instance, not claimed as new · already-finalized guard) + 1 soft (confidence/actuation gate) |
-| `src/cultural/phase.cljc` | **Phase 0→3** -- read-only → assisted intake → assisted verify → supervised (certification finalization always human; student intake is the ONLY auto-eligible op, no direct capital risk) |
-| `src/cultural/operation.cljc` | **OperationActor** -- langgraph-clj StateGraph |
-| `src/cultural/sim.cljc` | demo driver |
+| `src/cultural/store.kotoba` | **Store** protocol -- `MemStore` ‖ `DatomicStore` (`langchain.db`) + append-only audit ledger + certification-finalization history. No dynamically-filed sub-record -- the actuation op acts directly on a pre-seeded student, and the double-actuation guard checks a dedicated `:certification-finalized?` boolean rather than a `:status` value |
+| `src/cultural/registry.kotoba` | Certification-finalization draft records, plus `practice-hours-insufficient?` -- an HONEST reuse of this fleet's MINIMUM-threshold sufficiency check family (the NINTH instance), directly analogous to `secondary.registry/attendance-hours-insufficient?`'s own shape, not claimed as new |
+| `src/cultural/facts.kotoba` | Per-jurisdiction cultural-education/child-performer catalog with an official spec-basis citation per entry, honest coverage reporting |
+| `src/cultural/culturaladvisor.kotoba` | **StudioEdOps-LLM** -- `mock-advisor` ‖ `llm-advisor`; intake/curriculum-verification/child-performer-permit-screening/certification-finalization proposals |
+| `src/cultural/governor.kotoba` | **Instruction Integrity Governor** -- 5 HARD checks (spec-basis · evidence-incomplete · child-performer-work-permit-unresolved, unconditional evaluation, GENUINELY NEW, the 53rd grounding of this discipline · practice-hours-insufficient, MINIMUM-threshold reuse, the 9th instance, not claimed as new · already-finalized guard) + 1 soft (confidence/actuation gate) |
+| `src/cultural/phase.kotoba` | **Phase 0→3** -- read-only → assisted intake → assisted verify → supervised (certification finalization always human; student intake is the ONLY auto-eligible op, no direct capital risk) |
+| `src/cultural/operation.kotoba` | **OperationActor** -- langgraph-clj StateGraph |
+| `src/cultural/sim.kotoba` | demo driver |
 | `test/cultural/*_test.clj` | governor contract · phase invariants · store parity · registry conformance · facts coverage |
 
 ## Business-process coverage (honest)
