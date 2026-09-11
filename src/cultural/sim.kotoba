@@ -1,5 +1,5 @@
 (ns cultural.sim
-  "Demo driver -- `clojure -M:dev:run`. Walks a clean student through
+  "Demo driver -- `kbb -M:dev:run`. Walks a clean student through
   intake -> curriculum verification -> child-performer-permit
   screening -> certification-finalization proposal (always escalates)
   -> human approval -> commit, then shows four HARD holds (a

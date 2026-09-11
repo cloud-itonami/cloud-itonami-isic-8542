@@ -30,7 +30,7 @@
        document (a CSS-variable closure check -- an unstyled console
        is a silent failure otherwise).
 
-  Usage: `clojure -M:dev:render-html [out-file]`
+  Usage: `kbb -M:dev:render-html [out-file]`
   (default `docs/samples/operator-console.html`)."
   (:require [kotoba.lang.text :as str]
             [cultural.facts :as facts]
@@ -529,7 +529,7 @@
      "    <h1>Cultural education (ISIC 8542) — Operator Console</h1>\n"
      "    <span class=\"chip\">StudioEdOps-LLM ⊣ Instruction Integrity Governor · read-only sample</span>\n"
      "    <p class=\"pf-meta\">Build-time generated from the real actor stack by "
-     "<code>cultural.render-html</code> (<code>clojure -M:dev:render-html</code>). "
+     "<code>cultural.render-html</code> (<code>kbb -M:dev:render-html</code>). "
      "Every id, jurisdiction, hour count, hold reason and certification number below was read back "
      "out of <code>cultural.store</code> after a real <code>langgraph.graph/run*</code> run over the "
      "seeded students in <code>cultural.store/demo-data</code> — nothing on this page is hand-typed "
