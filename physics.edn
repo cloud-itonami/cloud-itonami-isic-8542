@@ -1,0 +1,35 @@
+;; What this vertical's robot physically does, declared for
+;; kotoba.robotics.process (kotoba-lang/robotics). `kbb -M:dev:physics` runs it.
+;;
+;; README "Robotics premise": a studio-safety monitoring robot supports
+;; physical supervision during activities in cultural education (ISIC 8542:
+;; music, dance, art and pottery studios). Its physical work in the studio:
+;; watching the pottery kiln, whose outer wall students pass during a glaze
+;; firing, and moving an upright piano on a dolly between practice rooms.
+;;
+;; Every number without a cited source is marked `estimate` in its :basis.
+;; Replacing an estimate with a sourced value is this bot's growth work.
+{:physics/schema "itonami.physical-ai.spec.v1"
+ :repo "cloud-itonami/cloud-itonami-isic-8542"
+ :cases
+ [{:id :kiln-wall-skin
+   :kind :thermal
+   :procedure "electric pottery kiln at a 1200 C glaze firing for eight hours; insulating firebrick wall, outer skin in the studio"
+   :params {:conductivity-w-mk 0.30 :density-kg-m3 800.0 :specific-heat-j-kgk 1000.0
+            :t-hot-c 1200.0 :h-front-w-m2k 50.0 :h-back-w-m2k 10.0
+            :threshold-c 60.0 :duration-s 28800.0 :nodes 11}
+   :sweep {:param :thickness-m :values [0.064 0.114 0.15 0.23 0.30]}
+   :quantity :peak-back-c
+   :limit {:max 60.0 :basis "estimate: brief-contact skin burn threshold for a painted metal casing around 60 C; ISO 13732-1 gives the curves to replace it with"}
+   :boundary {:lo 0.04 :hi 0.40}}
+  {:id :piano-dolly-move
+   :kind :transport
+   :procedure "robot moves a 250 kg upright piano broadside on a dolly from the practice room to the recital hall and has to stop for a student in the doorway"
+   :params {:mass-kg 60.0 :payload-kg 250.0 :distance-m 35.0 :v-max-mps 0.5 :a-max-mps2 0.3
+            :drive-force-n 400.0 :crr 0.02
+            :cog-height-m 0.30 :support-half-length-m 0.30
+            :payload-cog-height-m 0.85 :max-time-s 2000.0}
+   :sweep {:param :brake-decel-mps2 :values [0.5 1.0 1.5 2.0 3.0]}
+   :quantity :min-tipover-margin
+   :limit {:min 0.50 :basis "estimate: a tall, top-heavy instrument keeps half the restoring moment in reserve for floor joints and door thresholds"}
+   :boundary {:lo 0.2 :hi 5.0}}]}
